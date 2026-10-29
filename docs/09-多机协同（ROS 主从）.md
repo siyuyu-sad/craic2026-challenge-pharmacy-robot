@@ -15,7 +15,7 @@
 | `多机协同操作说明.docx` | 文档 | 手柄增补功能、主从启动顺序、如何改成程序控制 |
 | `相关底层代码/` | 厂商底层 | `eprobot_start`（含 `art_racecar.py` 底盘驱动、`F1_demo.py`）、`robot_navigation`（地图/参数/launch/`show_mark.py`）、`navigation-melodic`（整份 ROS 导航栈源码） |
 
-## 多机协同是怎么做的（机制，不是我写的）
+## 多机协同是怎么做的（机制，不是我写的，但操作会）
 
 **1. 一主多从的 ROS 网络**：全部树莓派从 AP 模式改成 client 模式接同一路由器，路由器做 MAC-IP 绑定保证地址固定；`hostname` 写本机网络名，`hosts` 把网络名与 `127.0.1.1` 绑定并写上彼此的地址，`.bashrc` 里指定 master：
 
