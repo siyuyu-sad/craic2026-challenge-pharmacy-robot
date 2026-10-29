@@ -12,6 +12,18 @@
 
 相似度用 `difflib.SequenceMatcher(None, a.splitlines(), b.splitlines()).ratio()` 计算，比较对象是厂商资料包 `D:\F1` 中的原始脚本（仓库内不包含该资料包）。
 
+## `vendor/multi_robot_joy/` —— 厂商课程包，**非本人实现**
+
+`vendor/multi_robot_joy/` 是厂商/助教发放的**多机协同课程包**（`D:\F1\小车课程资料\多机协同配置与操作`），原样收录，作者未改动一行：
+
+| 文件 | 来源 | 归属 |
+| --- | --- | --- |
+| `vendor/multi_robot_joy/eprobot_joy/**` | 课程包内 `eprobot_joy/` 包 | 厂商（`package.xml` 的 `maintainer` 为 `ubuntu@todo.todo`，`<license>TODO</license>` 未填，**实际许可不明**） |
+| `vendor/multi_robot_joy/EPRobot_joy_{master,slave}.launch` | 课程包内同名文件 | 厂商 |
+| `vendor/multi_robot_joy/参考配置文件/{hosts,hostname}` | 课程包内 `参考配置文件/` | 厂商（`.bashrc` 未收录，避免夹带整份发行版配置） |
+
+**收录目的仅为止于留档与面试对照**：作者读过这套实现，并在 `docs/09-多机协同（ROS 主从）.md` 与 `vendor/multi_robot_joy/README.md` 中逐项梳理机制与行号。它解决的是「多台车能被同一个 master 看见、能被一只手柄同时驱动」，**不含任何任务分配、结果交换或避让逻辑**——那部分本仓库没有留存（见 `docs/08`）。
+
 ## 平台与第三方
 
 - **EPRobot V2.0** 教学平台、底盘固件（STM32F407VET6）、`base_control`/`robot_navigation`/`astra_camera` 等 launch 与驱动：厂商提供，不在本仓库内

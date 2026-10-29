@@ -2,13 +2,15 @@
 
 `D:\F1\小车课程资料\多机协同配置与操作` 是厂商/助教发的**多机协同课程包**。结论先说：**有「多机跑起来」的完整基础设施，没有「多机协同」的决策代码**。
 
+> 源码已收录到仓库 [`vendor/multi_robot_joy/`](../vendor/multi_robot_joy/README.md)（**厂商代码，非本人实现**，归属见 `NOTICE.md`）。下文提到的路径以仓库内 `vendor/multi_robot_joy/...` 为准，点开可对照行号。
+
 ## 包里的东西
 
 | 条目 | 类型 | 内容 |
 | --- | --- | --- |
-| `eprobot_joy/` | **可编译源码** | 一个 ROS 节点：从 `/dev/input/js0` 读 PS2 手柄，**同时向 3 个话题发同一份 `Twist`**，带按键位掩码逐个开关 |
-| `EPRobot_joy_master.launch` / `EPRobot_joy_slave.launch` | 启动文件 | 主机拉起底盘节点 + 手柄节点；从机只拉底盘节点（手柄节点整段被注释） |
-| `参考配置文件/{hostname, hosts, .bashrc}` | 配置样例 | 一台车的网络名与主从环境变量样例 |
+| `eprobot_joy/`（仓库内 `vendor/multi_robot_joy/eprobot_joy/`） | **可编译源码** | 一个 ROS 节点：从 `/dev/input/js0` 读 PS2 手柄，**同时向 3 个话题发同一份 `Twist`**，带按键位掩码逐个开关 |
+| `EPRobot_joy_master.launch` / `_slave.launch`（仓库内同路径） | 启动文件 | 主机拉起底盘节点 + 手柄节点；从机只拉底盘节点（手柄节点整段被注释） |
+| `参考配置文件/{hostname, hosts, .bashrc}`（仓库收前两个，`.bashrc` 仅摘三条 `export`） | 配置样例 | 一台车的网络名与主从环境变量样例 |
 | `EPRobot多机通讯的配置方法.pdf` | 文档 | 原理 + 局域网配置 + 主从机配置（含 AP→client 模式改造、`wpa_supplicant`） |
 | `多机协同操作说明.docx` | 文档 | 手柄增补功能、主从启动顺序、如何改成程序控制 |
 | `相关底层代码/` | 厂商底层 | `eprobot_start`（含 `art_racecar.py` 底盘驱动、`F1_demo.py`）、`robot_navigation`（地图/参数/launch/`show_mark.py`）、`navigation-melodic`（整份 ROS 导航栈源码） |

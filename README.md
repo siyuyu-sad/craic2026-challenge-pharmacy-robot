@@ -125,6 +125,7 @@ docs/
   07-复现与验证.md
   08-双车通信（前期版本）.md
   09-多机协同（ROS 主从）.md
+vendor/multi_robot_joy/ 厂商多机协同课程包原样留档（**非本人实现**，见其 README 与 NOTICE）
 RESUME.md              简历三段式写法 + 面试展开点
 NOTICE.md              来源与归属说明
 ```
