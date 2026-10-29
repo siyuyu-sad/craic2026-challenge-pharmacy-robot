@@ -1,14 +1,14 @@
 # 简历材料（三段式：背景 + 角色 + 可验证产出）
 
-> 用法：主条目放简历「项目经历」，子条目按投递岗位挑 2–3 条。凡标 `待补` 的数字必须填实测值再投，面试时会被追问口径。
+> 用法：主条目放简历「项目经历」，子条目按投递岗位挑 2–3 条。文中数字都有出处（见「数字来源」表）；凡标 `待补` 的地方是**当时没测**的，不要编。
 
 ## 主条目
 
 **智慧药房无人配送小车 ｜ 第 28 届中国机器人及人工智能大赛「护航者」赛项 ｜ 3 人队**
 
-- **背景**：赛项要求在 **4 分钟**限时内，由小车自主完成「识别处方二维码 → 到体检窗口取样本 → 送到对应化验窗口 → 向裁判系统实时上报状态」的完整闭环，识别与导航任一步失败即整轮零分。
-- **角色**：3 人队内负责**建图与导航定位、文字识别、双车通信**；本仓库的 3 个 ROS 节点（任务调度 / 二维码识别 / 板2 文字识别，约 1000 行 Python 2.7）与裁判上报协议为主要实现。
-- **产出**：单车单趟闭环稳定跑完 4 分钟内流程，**二维码识别成功率 ≥ 95%**；裁判端 **1 Hz** JSON 状态上报，断线 **5 s 内自动重连**；识别失败时 3 s 内回退默认处方，流程不中断。
+- **背景**：赛项要求在 **4 分钟**限时内，由小车自主完成「识别处方二维码 → 到体检窗口取样本 → 送到对应化验窗口 → 向裁判系统实时上报状态」的完整闭环，识别与导航任一步失败即整轮零分；本届在前几届「只识别大写字母」的基础上新增了二维码与状态牌文字两路识别。
+- **角色**：3 人队内负责**建图与导航定位、文字识别、双车通信**，并承担程序主体——在厂商基础脚本上重构三路识别链路与任务状态机，本仓库 3 个 ROS 节点（任务调度 / 二维码识别 / 板2 文字识别，约 1000 行 Python 2.7）与裁判上报协议为主要实现；队友负责落地后的参数微调（速度、转角、偏差容忍度）与现场操作。
+- **产出**：单趟完整闭环**约 1 分 10 秒**，对 4 分钟限时的**余量约 70%**；二维码识别成功率 **≥ 95%**；裁判端 **1 Hz** JSON 状态上报，断线 **5 s 内自动重连**；识别失败 3 s 内回退默认处方，流程不中断。
 
 ## 子条目（挑着用）
 
@@ -16,13 +16,15 @@
 
 - **背景**：板面二维码随车身姿态呈透视畸变，四个区域各自编码窗口组合，反光与斜视下 `pyzbar` 直接解码大面积失败。
 - **角色**：重写「定位 → 归一化 → 分区域解码 → 投票」链路。
-- **产出**：Canny + 轮廓做四边形/正方形/包含关系三层筛选，把定位框数量门限从 `== 48` 放宽为 `40–56` 后，斜视帧不再整帧判废；四点透视把棋盘归一化到 600×600 再切四象限 ROI，配合整帧 **5° 旋转补偿**与透视后镜像判定，解决「车停不同侧、区域顺序相反」；四区域解码后按解出字符数投票定样本数，非法串计入 `Error_count` 一并上报。**识别成功率 ≥ 95%**（`待补`：N 次/正确 M 次，测试条件）。
+- **产出**：Canny + 轮廓做四边形/正方形/包含关系三层筛选，把定位框数量门限从 `== 48` 放宽为 `40–56` 后，斜视帧不再整帧判废；四点透视把棋盘归一化到 600×600 再切四象限 ROI，配合整帧 **5° 旋转补偿**与透视后镜像判定，解决「车停不同侧、区域顺序相反」；四区域解码后按解出字符数投票定样本数，非法串计入 `Error_count` 一并上报。**现场成功率 ≥ 95%**（现场观察值，逐帧记录未留存——详见「数字来源」表）。
 
 ### B. 识别板2 文字识别（Tesseract chi_sim）
 
 - **背景**：识别板2 显示「化验区 忙碌中 · 等待 8 秒」，需结构化提取忙/闲状态与等待秒数，光照不均时全局阈值二值化几乎不可用。
 - **角色**：独立实现 OCR 节点（预处理 + 版面切分 + 语义解析 + 统计）。
-- **产出**：ROI → 高斯去噪 → **自适应阈值**（`GAUSSIAN_C, blockSize=11, C=2`）→ Tesseract `--oem 3 --psm 6 -l chi_sim`；关键词白名单判忙/闲，正则取「N 秒」并夹在 **5–10 s** 物理区间内，越界回退 8 s（板子只给 5–10 s，超范围即判 OCR 认错数字）；10 Hz 发布 `[is_busy, wait_s]`，连续 30 次失败才告警一次避免日志刷屏。
+- **产出**：ROI → 高斯去噪 → **自适应阈值**（`GAUSSIAN_C, blockSize=11, C=2`）→ Tesseract `--oem 3 --psm 6 -l chi_sim`；关键词白名单判忙/闲，正则取「N 秒」并夹在 **5–10 s** 物理区间内，越界回退 8 s；10 Hz 发布 `[is_busy, wait_s]`，连续 30 次失败才告警一次避免日志刷屏。**离线测试通过，现场运行不稳定，未收敛**——复盘定位到四层原因，第一层是我自己的统计口径把「有输出」当成了「判对」，让失败在离线阶段完全不可见；其余为固定 ROI 依赖停车精度、`C=2` 在反光牌面上的尺度失配、`psm 6` 依赖排版（见 `docs/04`）。
+
+> B 条**建议这么写**：把它作为「做到哪、卡在哪、为什么卡」的完整案例，而不是当成亮点。面试官对「识别不准还敢写」的追问，比对你写成 99% 的追问更友好——而且这条能被追问出真东西（见面试预演第 7 题）。若岗位偏感知/算法，把这条提到 A 前面。
 
 ### C. 裁判上报协议与状态机（ROS + Python 2.7）
 
@@ -34,27 +36,28 @@
 
 - **背景**：整轮任务含 1 次识别 + 最多 3 个取样本窗口 + 1 个送检窗口 + 返程，4 分钟限时卡得很死。
 - **角色**：按阶段拆时间预算，压缩非必要停顿。
-- **产出**：每站停顿 0.5 s → **0.25 s**、回起点 2 s → **1.0 s**，把省出的时间留给导航；导航失败即取消重发而非原地等待，`待补`：优化前/后单趟耗时对比。
+- **产出**：每站停顿 0.5 s → **0.25 s**、回起点 2 s → **1.0 s**，导航失败即取消重发而非原地等待（`wait_for_result(30 s)`）。**实测单趟约 1 分 10 秒，对 240 s 限时余量约 70%**；复盘中我推翻了自己的一个判断——停顿与 4 s 固定等待合计仅占总耗时约 7%，真正的时间在导航段，所以「抠停顿」改的是稳定性、不是成绩（见 `docs/05`）。
 
 ## 英文版（投外企/英文简历时用）
 
 **Smart Pharmacy Delivery Robot — 28th China Robot & AI Competition ("Guardian" Track), team of 3**
 
-- **Context**: 4-minute time limit per run; the robot must autonomously decode a prescription QR board, collect samples at exam windows, deliver them to the matching lab window, and stream status to the judge system — any failure zeroes the run.
-- **Role**: mapping & localization, OCR, and inter-robot communication; owned the three ROS nodes (mission FSM, QR detection, board OCR; ~1k lines of Python 2.7) and the judge reporting protocol.
-- **Impact**: full run completed within the 4-minute budget; **≥95% QR decode success**; 1 Hz JSON state reporting to the judge with automatic reconnect within 5 s; 3 s fallback to a default prescription so a single decode failure never aborts the run.
+- **Context**: 4-minute time limit per run; the robot must autonomously decode a prescription QR board, collect samples at exam windows, deliver them to the matching lab window, and stream status to the judge system — any failure zeroes the run. This edition added QR and status-board OCR on top of previous editions' "uppercase letters only" requirement.
+- **Role**: mapping & localization, OCR, and inter-robot communication; owned the program itself — rebuilt the three recognition paths and the mission FSM on top of the vendor baseline (three ROS nodes, ~1k lines of Python 2.7, plus the judge reporting protocol). Teammates handled post-deployment parameter tuning and on-site operation.
+- **Impact**: full run in **~70 s against a 240 s limit (~70% headroom)**; **≥95% QR decode success on site**; 1 Hz JSON state reporting with reconnect within 5 s; 3 s fallback to a default prescription. Board-2 OCR worked offline but was unstable on site — root-caused to a success metric that counted any OCR output as a hit, plus a fixed ROI that assumed repeatable parking.
 
 ## 数字来源
 
 | 数字 | 来源 | 面试被问时怎么说 |
 | --- | --- | --- |
 | 4 分钟 | 赛制限时 | 规则规定的单轮时限，不是我们实测耗时 |
-| 识别成功率 ≥ 95% | 用户提供的实测/估计 | 说清测试条件：板面平整、距离固定、N 帧；别把「成功」定义成「至少一个区域解出」含糊过去 |
-| 3 人队 | 队伍实际人数 | 说清自己那部分边界（哪几个节点、哪几处改动是队友的） |
+| 单趟约 70 s / 余量约 170 s | 现场观察，无逐趟日志（数据未留存） | 说「约 1 分 10 秒」，别给小数；余量是「留出来的」，不是「跑不到」 |
+| 识别成功率 ≥ 95% | 现场观察值，逐帧记录未留存 | 说清定义与条件：单轮内能解出可用处方（四区域至少一组合法组合）的轮次占比；补一句 5% 失败集中在斜视与反光帧——这比给个精确百分比可信 |
+| 板2 文字识别不稳定 | 现场现象 | **主动说**：离线能过、台上不稳，原因是我自己的统计口径把「有输出」当「判对」；四层原因见仓库 `docs/04` |
+| 3 人队 / 分工 | 队伍实际 | 我：建图导航、文字识别、双车通信 + 程序主体；队友：参数微调、现场操作（代码下发、IP） |
 | 1 Hz / 5 s 重连 / 0.25 s / 1.0 s / 40–56 / 5° | 代码常量 | 都能在仓库里指到行号——这是「可验证」的含义 |
-| 单趟耗时、丢帧率 | `待补` | 没有实测就别编；宁可说「时限内完成，具体余量没精测」 |
 
-## 面试预演（大概率被问的 6 个问题）
+## 面试预演（大概率被问的 9 个问题）
 
 1. **为什么定位框数量放宽成 40–56，而不是继续调 `== 48`？** 因为 `== 48` 对「少几个框」零容忍，而框数受斜视角度、反光、板面遮挡影响是连续变化的；放宽成区间是把「必须完美」降级为「大致正确」，代价是理论上可能把别的图案当定位框——由后续的包含关系 + 4 区域解码成功率兜住。
 2. **5° 旋转是拍脑袋定的吗？** 是扫角度扫出来的：0°/5°/10° 三档在赛前采集的样张上比较整帧可用率，5° 命中最多；写死是因为比赛只有一块板、一种停车姿态。
@@ -62,3 +65,6 @@
 4. **`Error_count` 有什么用？** 四个区域里解出非法串说明该区域解码不可信，把它作为质量指标上报，便于赛后在日志里定位「是哪个区域坏了」，当时没有用于实时决策。
 5. **上报为什么用标定坐标不用实时 odom？** `clear_costmaps` 后局部定位会跳，而裁判端按坐标容差判点位；到达任务点意味着「应该」在标定位置，上报标定值消除抖动。（如实说明这是工程折中，不是作弊：只在到达任务点那一刻生效，行驶中仍报实时 odom。）
 6. **哪个 bug 最难查？** 视频流断开时崩溃：`frame.shape` 写在 `hx` 判断之前，`cap.read()` 失败返回的 `frame=None`，进程直接 `AttributeError` 退出且没有日志——现象是「小车跑一半整个识别节点消失」。修法是把 `hx` 判断提到最前（见 `docs/06-缺陷清单.md`）。
+7. **文字识别为什么离线能过、现场挂？** 先怀疑指标，再怀疑输入，最后才怀疑算法。指标上 `STATS["success"]` 只要 Tesseract 吐出任意字符就 +1，而秒数越界时又静默回退 `8` ——**错答案没有失败信号**，离线阶段指标全绿；输入上是固定 ROI 依赖「车每次停同一位置」，现场 `xy_goal_tolerance` 内的落位偏差会让板子出画；算法上 `C=2` 在反光牌面上把笔画整体吃掉，「忙」「空」只差局部笔画。修法写成了四条最小验证闭环（人工标注集换指标 → 量化停车误差 → 失败显式上报 → 板框透视回正再 OCR）。
+8. **70 s 对 240 s，余量 70%，为什么不把停停顿再压、或者少跑点？** 因为余量本身是设计目标：现场有障碍、costmap 残留、裁判端抖动，余量是给这些异常留的预算。而且复盘算出停顿 + 4 s 固定等待只占 70 s 的 7%，**瓶颈不在停顿而在导航段**——继续抠停顿的收益不足 5 s，却会牺牲取样本动作的稳定性。真正该优化的是识别板那 4 s 固定等待（`rospy.sleep(1.0)` + 3 s 轮询且不 `break`），但那需要改「多等几帧更可信」的判断，风险高于收益。
+9. **前几届只识别大写字母，你这届多了什么？** 多了处方二维码（透视畸变 + 四区域投票）和状态牌文字（Tesseract chi_sim + 语义约束）两路；识别从「单字符分类」变成「结构化单据解析」，也把识别结果接进了任务状态机与裁判上报（`CV2` 字段 `"AB-2"` 这种格式就是给裁判端解析用的）。

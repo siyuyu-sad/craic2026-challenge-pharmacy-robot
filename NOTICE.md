@@ -24,7 +24,7 @@
 | 项 | 值 | 出处 |
 | --- | --- | --- |
 | 车型 | EPRobot V2.0 | 厂商资料 `EPV2.0-ROS智能车资料链接.docx`、平台手册 |
-| 底盘 MCU | STM32F407VET6 | 用户提供（原文写作 `STM32F407VET62`，按 ST 料号规则归一化，**待与实物丝印核对**） |
+| 底盘 MCU | STM32F407VET6 | 作者提供（最初写作 `STM32F407VET62`，已确认是笔误；料号规则也指向 VET6：LQFP100 / 512 KB Flash / 带以太网 MAC） |
 | 激光雷达 | SLAMTEC RPLIDAR A1，手册标注 A1M8 | 用户提供 + 厂商手册 |
 | 深度相机 | Orbbec Astra | 厂商 demo 启动方式 `roslaunch astra_camera astra.launch`（`竞赛程序说明.docx`） |
 | 底盘串口 | `/dev/ttyUSB0` @ 115200 | 厂商 `base_control.launch` |
