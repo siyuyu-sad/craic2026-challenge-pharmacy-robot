@@ -6,9 +6,9 @@
 
 **智慧药房无人配送小车 ｜ 第 28 届中国机器人及人工智能大赛「护航者」赛项 ｜ 省赛二等奖 · 国赛三等奖 ｜ 3 人队**
 
-- **背景**：赛项要求在 **4 分钟**限时内，由小车自主完成「识别处方二维码 → 到体检窗口取样本 → 送到对应化验窗口 → 向裁判系统实时上报状态」的完整闭环，识别与导航任一步失败即整轮零分；本届在前几届「只识别大写字母」的基础上新增了二维码与状态牌文字两路识别。
-- **角色**：3 人队内负责**建图与导航定位、文字识别、双车通信**，并承担程序主体——在厂商基础脚本上重构三路识别链路与任务状态机，本仓库 3 个 ROS 节点（任务调度 / 二维码识别 / 板2 文字识别，约 1000 行 Python 2.7）与裁判上报协议为主要实现；队友负责落地后的参数微调（速度、转角、偏差容忍度）与现场操作。
-- **产出**：单趟完整闭环**约 1 分 10 秒**，对 4 分钟限时的**余量约 70%**；二维码识别成功率 **≥ 95%**；裁判端 **1 Hz** JSON 状态上报，断线 **5 s 内自动重连**；识别失败 3 s 内回退默认处方，流程不中断。最终获**省赛二等奖、国赛三等奖**。
+- **背景**：赛项要求小车在 **4 分钟**限时内**反复跑圈**：每圈依次经过「读处方二维码 → 采样区取样本 → 化验区读窗口空闲状态 → 化验区提交样本 → 回起点」，同时向裁判系统实时上报状态；段与段串行推进，任一段识别或导航失败都会拖慢圈速、影响圈数。本届在前几届「只识别大写字母」的基础上新增了二维码与状态牌文字两路识别。
+- **角色**：3 人队内负责**建图与导航定位、文字识别、双车通信**，并承担程序主体——在厂商基础脚本上重构三路识别链路与任务状态机，本仓库 3 个 ROS 节点（任务调度 / 二维码识别 / 板2 状态牌文字识别，约 1000 行 Python 2.7）与裁判上报协议为主要实现；队友负责落地后的参数微调（速度、转角、偏差容忍度）与现场操作。
+- **产出**：单圈完整循环**约 95 s**，4 分钟限时内可稳定完成 **2 个完整循环**（2 × 95 = 190 s）；二维码识别成功率 **≥ 95%**；裁判端 **1 Hz** JSON 状态上报，断线 **5 s 内自动重连**；识别失败 3 s 内回退默认处方，圈不中断。最终获**省赛二等奖、国赛三等奖**。
 
 ## 子条目（挑着用）
 
@@ -29,14 +29,14 @@
 ### C. 裁判上报协议与状态机（ROS + Python 2.7）
 
 - **背景**：裁判软件按 TCP 8888 端口收各车状态，要求高频、字段固定；底盘 odom 在反复 `clear_costmaps` 后漂移，直接透传会让裁判端位置判定抖动。
-- **角色**：实现上报模块与四阶段任务状态机（识别 → 取样 → 播报 → 送检）。
+- **角色**：实现上报模块与分段任务状态机（识别 → 取样 → 播报 → 送检，每圈循环回到起点）。
 - **产出**：独立线程 **1 Hz** 上报单行 JSON（`id/speed/odom/task/CV1/CV2`），`settimeout(3.0)` + 失败标记断连 + **5 s** 重连退避，裁判软件重启不影响小车跑流程；到达任务点后 odom 上报标定坐标而非实时里程计，消除判定抖动；状态机 9→10→11→9 单循环，每段导航前 `clear_costmaps`、`wait_for_result(30 s)` 超时取消重发，避免一次卡死吃掉全部时限。
 
 ### D. 时限内的跑位调优（4 分钟预算）
 
 - **背景**：整轮任务含 1 次识别 + 最多 3 个取样本窗口 + 1 个送检窗口 + 返程，4 分钟限时卡得很死。
 - **角色**：按阶段拆时间预算，压缩非必要停顿。
-- **产出**：每站停顿 0.5 s → **0.25 s**、回起点 2 s → **1.0 s**，导航失败即取消重发而非原地等待（`wait_for_result(30 s)`）。**实测单趟约 1 分 10 秒，对 240 s 限时余量约 70%**；复盘中我推翻了自己的一个判断——停顿与 4 s 固定等待合计仅占总耗时约 7%，真正的时间在导航段，所以「抠停顿」改的是稳定性、不是成绩（见 `docs/05`）。
+- **产出**：每站停顿 0.5 s → **0.25 s**、回起点 2 s → **1.0 s**，导航失败即取消重发而非原地等待（`wait_for_result(30 s)`）。**实测单圈约 95 s，240 s 限时内可完成 2 个完整循环**；按圈速拆账后我推翻了自己的一个判断——停顿与 4 s 固定等待合计不到 6 s（约占 6%），真正的时间在导航段，所以「抠停顿」改的是稳定性、不是圈速（见 `docs/05`）。
 
 ### E. 多车部署与车际通信（ROS 主从 + TCP）
 
@@ -52,7 +52,7 @@
 
 - **Context**: 4-minute time limit per run; the robot must autonomously decode a prescription QR board, collect samples at exam windows, deliver them to the matching lab window, and stream status to the judge system — any failure zeroes the run. This edition added QR and status-board OCR on top of previous editions' "uppercase letters only" requirement.
 - **Role**: mapping & localization, OCR, and inter-robot communication; owned the program itself — rebuilt the three recognition paths and the mission FSM on top of the vendor baseline (three ROS nodes, ~1k lines of Python 2.7, plus the judge reporting protocol). Teammates handled post-deployment parameter tuning and on-site operation.
-- **Impact**: full run in **~70 s against a 240 s limit (~70% headroom)**; **≥95% QR decode success on site**; 1 Hz JSON state reporting with reconnect within 5 s; 3 s fallback to a default prescription. Board-2 OCR worked offline but was unstable on site — root-caused to a success metric that counted any OCR output as a hit, plus a fixed ROI that assumed repeatable parking. Awarded **2nd prize (provincial) / 3rd prize (national)**.
+- **Impact**: **~95 s per lap**, i.e. **two complete laps inside the 240 s limit** (2 × 95 = 190 s); **≥95% QR decode success on site**; 1 Hz JSON state reporting with reconnect within 5 s; 3 s fallback to a default prescription so a lap is never abandoned. Board-2 status OCR (which lab window is free) worked offline but was unstable on site — root-caused to a success metric that counted any OCR output as a hit, plus a fixed ROI that assumed repeatable parking. Awarded **2nd prize (provincial) / 3rd prize (national)**.
 
 ## 数字来源
 
@@ -60,7 +60,8 @@
 | --- | --- | --- |
 | 4 分钟 | 赛制限时 | 规则规定的单轮时限，不是我们实测耗时 |
 | 省赛二等奖 / 国赛三等奖 | 获奖证书 | 有证书可查，放简历标题行；说清是「第 28 届中国机器人及人工智能大赛 · 护航者赛项」，别简称成「国创」之类 |
-| 单趟约 70 s / 余量约 170 s | 现场观察，无逐趟日志（数据未留存） | 说「约 1 分 10 秒」，别给小数；余量是「留出来的」，不是「跑不到」 |
+| 单圈约 95 s | 现场观察，无逐圈日志（临时数据未留存） | 说「约 95 s」，别给小数；用「限时内可完成 2 圈」表达，别用「余量百分比」 |
+| 2 圈 = 190 s / 3 圈需 ≤80 s | 算术推论（240 ÷ 95、240 ÷ 3） | 前者是当时达到的，后者是目标不是成绩，别混着说 |
 | 识别成功率 ≥ 95% | 现场观察值，逐帧记录未留存 | 说清定义：单轮内能解出可用处方（四区域至少一组合法组合）的轮次占比。若你确实观察到失败集中在某类帧（斜视/反光/板面脏），补一句会显著加分；**没观察到就只给百分比，不要替自己编失败分布** |
 | 板2 文字识别不稳定 | 现场现象 | **主动说**：离线能过、台上不稳，原因是我自己的统计口径把「有输出」当「判对」；四层原因见仓库 `docs/04` |
 | 3 人队 / 分工 | 队伍实际 | 我：建图导航、文字识别、双车通信 + 程序主体；队友：参数微调、现场操作（代码下发、IP） |
@@ -75,6 +76,6 @@
 5. **上报为什么用标定坐标不用实时 odom？** `clear_costmaps` 后局部定位会跳，而裁判端按坐标容差判点位；到达任务点意味着「应该」在标定位置，上报标定值消除抖动。（如实说明这是工程折中，不是作弊：只在到达任务点那一刻生效，行驶中仍报实时 odom。）
 6. **哪个 bug 最难查？** 视频流断开时崩溃：`frame.shape` 写在 `hx` 判断之前，`cap.read()` 失败返回的 `frame=None`，进程直接 `AttributeError` 退出且没有日志——现象是「小车跑一半整个识别节点消失」。修法是把 `hx` 判断提到最前（见 `docs/06-缺陷清单.md`）。
 7. **文字识别为什么离线能过、现场挂？** 先怀疑指标，再怀疑输入，最后才怀疑算法。指标上 `STATS["success"]` 只要 Tesseract 吐出任意字符就 +1，而秒数越界时又静默回退 `8` ——**错答案没有失败信号**，离线阶段指标全绿；输入上是固定 ROI 依赖「车每次停同一位置」，现场 `xy_goal_tolerance` 内的落位偏差会让板子出画；算法上 `C=2` 在反光牌面上把笔画整体吃掉，「忙」「空」只差局部笔画。修法写成了四条最小验证闭环（人工标注集换指标 → 量化停车误差 → 失败显式上报 → 板框透视回正再 OCR）。
-8. **70 s 对 240 s，余量 70%，为什么不把停停顿再压、或者少跑点？** 因为余量本身是设计目标：现场有障碍、costmap 残留、裁判端抖动，余量是给这些异常留的预算。而且复盘算出停顿 + 4 s 固定等待只占 70 s 的 7%，**瓶颈不在停顿而在导航段**——继续抠停顿的收益不足 5 s，却会牺牲取样本动作的稳定性。真正该优化的是识别板那 4 s 固定等待（`rospy.sleep(1.0)` + 3 s 轮询且不 `break`），但那需要改「多等几帧更可信」的判断，风险高于收益。
+8. **一圈 95 s，240 s 只能跑 2 圈，为什么不再快点？** 因为 95 s 里绝大部分是导航与车体动作，停顿和 4 s 识别等待加起来不到 6 s；把等待压到极限也就省 2–3 s，**到不了 3 圈的门槛（单圈需 ≤80 s）**。要真正提速得动导航参数、点位标定或减少取样本窗口，那些改动直接影响成功率的稳定性，风险远高于收益。这也解释了为什么复盘把优化项从「抠等待」改成「导航段与识别一次成功率」。
 9. **前几届只识别大写字母，你这届多了什么？** 多了处方二维码（透视畸变 + 四区域投票）和状态牌文字（Tesseract chi_sim + 语义约束）两路；识别从「单字符分类」变成「结构化单据解析」，也把识别结果接进了任务状态机与裁判上报（`CV2` 字段 `"AB-2"` 这种格式就是给裁判端解析用的）。
 10. **多车怎么协同的？为什么比赛版是单车？** 平台给的是「一主多从 ROS + 手柄三路 `cmd_vel` 扇出」：`hostname`/`hosts` 绑地址、`ROS_MASTER_URI:11311` 指 master、每车 `cmd_vel` remap 到 `EPRobotN/cmd_vel` 做命名空间隔离——**这层是基础设施，不含任何协同决策**。我们前期在它之上加了车际 TCP 传识别结果；比赛版改成单车 + 每车直报裁判，因为现场网络由主办方发放，改 `hostname`/`hosts` 风险高于收益，且协调责任可以外移给裁判端（详见 `docs/09`）。被追问「多机协同的代码在哪」就如实说：基础设施是平台的，协同策略那版没留存。
