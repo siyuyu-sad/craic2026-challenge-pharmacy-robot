@@ -4,11 +4,11 @@
 
 ## 主条目
 
-**智慧药房无人配送小车 ｜ 第 28 届中国机器人及人工智能大赛「护航者」赛项 ｜ 3 人队**
+**智慧药房无人配送小车 ｜ 第 28 届中国机器人及人工智能大赛「护航者」赛项 ｜ 省赛二等奖 · 国赛三等奖 ｜ 3 人队**
 
 - **背景**：赛项要求在 **4 分钟**限时内，由小车自主完成「识别处方二维码 → 到体检窗口取样本 → 送到对应化验窗口 → 向裁判系统实时上报状态」的完整闭环，识别与导航任一步失败即整轮零分；本届在前几届「只识别大写字母」的基础上新增了二维码与状态牌文字两路识别。
 - **角色**：3 人队内负责**建图与导航定位、文字识别、双车通信**，并承担程序主体——在厂商基础脚本上重构三路识别链路与任务状态机，本仓库 3 个 ROS 节点（任务调度 / 二维码识别 / 板2 文字识别，约 1000 行 Python 2.7）与裁判上报协议为主要实现；队友负责落地后的参数微调（速度、转角、偏差容忍度）与现场操作。
-- **产出**：单趟完整闭环**约 1 分 10 秒**，对 4 分钟限时的**余量约 70%**；二维码识别成功率 **≥ 95%**；裁判端 **1 Hz** JSON 状态上报，断线 **5 s 内自动重连**；识别失败 3 s 内回退默认处方，流程不中断。
+- **产出**：单趟完整闭环**约 1 分 10 秒**，对 4 分钟限时的**余量约 70%**；二维码识别成功率 **≥ 95%**；裁判端 **1 Hz** JSON 状态上报，断线 **5 s 内自动重连**；识别失败 3 s 内回退默认处方，流程不中断。最终获**省赛二等奖、国赛三等奖**。
 
 ## 子条目（挑着用）
 
@@ -38,26 +38,35 @@
 - **角色**：按阶段拆时间预算，压缩非必要停顿。
 - **产出**：每站停顿 0.5 s → **0.25 s**、回起点 2 s → **1.0 s**，导航失败即取消重发而非原地等待（`wait_for_result(30 s)`）。**实测单趟约 1 分 10 秒，对 240 s 限时余量约 70%**；复盘中我推翻了自己的一个判断——停顿与 4 s 固定等待合计仅占总耗时约 7%，真正的时间在导航段，所以「抠停顿」改的是稳定性、不是成绩（见 `docs/05`）。
 
+### E. 多车部署与车际通信（ROS 主从 + TCP）
+
+- **背景**：平台只提供「一主多从的 ROS 网络 + 手柄三路速度扇出」这一层基础设施；比赛需要多车分工，而车与车之间没有任何状态交换。
+- **角色**：在多机基础设施上完成多车联调（`hostname`/`hosts` 绑定、`ROS_MASTER_URI:11311`、命名空间 `EPRobotN/cmd_vel` 隔离）；并实现车际 TCP 结果共享版本——1 号车把识别结果打包成 6 个整数推给 2 号车，2 号车据此决定去哪个窗口，把「一轮跑 3 个窗口」拆成两车各跑 1–2 个。
+- **产出**：双车主从配置跑通、两车可分别驱动且互不串车；车际通道修掉了「`except socket.timeout: pass` 但从未 `settimeout()`」的死代码（`recv` 永久阻塞、超时不重置缓冲导致重放旧指令、对端关闭后 100% CPU 忙等）。比赛版最终收敛为**单车 + 裁判统一上报**——把协调责任交给裁判端，车侧只报状态（原因见 `docs/09`）。
+
+> E 条要注明「双车版代码未留存」，只讲机制与修过的问题；`docs/09` 里对厂商多机包做了逐项梳理（含两处资料自身的不一致），可以直接当面试谈资。
+
 ## 英文版（投外企/英文简历时用）
 
-**Smart Pharmacy Delivery Robot — 28th China Robot & AI Competition ("Guardian" Track), team of 3**
+**Smart Pharmacy Delivery Robot — 28th China Robot & AI Competition ("Guardian" Track), 2nd Prize (Provincial) · 3rd Prize (National), team of 3**
 
 - **Context**: 4-minute time limit per run; the robot must autonomously decode a prescription QR board, collect samples at exam windows, deliver them to the matching lab window, and stream status to the judge system — any failure zeroes the run. This edition added QR and status-board OCR on top of previous editions' "uppercase letters only" requirement.
 - **Role**: mapping & localization, OCR, and inter-robot communication; owned the program itself — rebuilt the three recognition paths and the mission FSM on top of the vendor baseline (three ROS nodes, ~1k lines of Python 2.7, plus the judge reporting protocol). Teammates handled post-deployment parameter tuning and on-site operation.
-- **Impact**: full run in **~70 s against a 240 s limit (~70% headroom)**; **≥95% QR decode success on site**; 1 Hz JSON state reporting with reconnect within 5 s; 3 s fallback to a default prescription. Board-2 OCR worked offline but was unstable on site — root-caused to a success metric that counted any OCR output as a hit, plus a fixed ROI that assumed repeatable parking.
+- **Impact**: full run in **~70 s against a 240 s limit (~70% headroom)**; **≥95% QR decode success on site**; 1 Hz JSON state reporting with reconnect within 5 s; 3 s fallback to a default prescription. Board-2 OCR worked offline but was unstable on site — root-caused to a success metric that counted any OCR output as a hit, plus a fixed ROI that assumed repeatable parking. Awarded **2nd prize (provincial) / 3rd prize (national)**.
 
 ## 数字来源
 
 | 数字 | 来源 | 面试被问时怎么说 |
 | --- | --- | --- |
 | 4 分钟 | 赛制限时 | 规则规定的单轮时限，不是我们实测耗时 |
+| 省赛二等奖 / 国赛三等奖 | 获奖证书 | 有证书可查，放简历标题行；说清是「第 28 届中国机器人及人工智能大赛 · 护航者赛项」，别简称成「国创」之类 |
 | 单趟约 70 s / 余量约 170 s | 现场观察，无逐趟日志（数据未留存） | 说「约 1 分 10 秒」，别给小数；余量是「留出来的」，不是「跑不到」 |
 | 识别成功率 ≥ 95% | 现场观察值，逐帧记录未留存 | 说清定义：单轮内能解出可用处方（四区域至少一组合法组合）的轮次占比。若你确实观察到失败集中在某类帧（斜视/反光/板面脏），补一句会显著加分；**没观察到就只给百分比，不要替自己编失败分布** |
 | 板2 文字识别不稳定 | 现场现象 | **主动说**：离线能过、台上不稳，原因是我自己的统计口径把「有输出」当「判对」；四层原因见仓库 `docs/04` |
 | 3 人队 / 分工 | 队伍实际 | 我：建图导航、文字识别、双车通信 + 程序主体；队友：参数微调、现场操作（代码下发、IP） |
 | 1 Hz / 5 s 重连 / 0.25 s / 1.0 s / 40–56 / 5° | 代码常量 | 都能在仓库里指到行号——这是「可验证」的含义 |
 
-## 面试预演（大概率被问的 9 个问题）
+## 面试预演（大概率被问的 10 个问题）
 
 1. **为什么定位框数量放宽成 40–56，而不是继续调 `== 48`？** 因为 `== 48` 对「少几个框」零容忍，而框数受斜视角度、反光、板面遮挡影响是连续变化的；放宽成区间是把「必须完美」降级为「大致正确」，代价是理论上可能把别的图案当定位框——由后续的包含关系 + 4 区域解码成功率兜住。
 2. **5° 旋转是拍脑袋定的吗？** 是扫角度扫出来的：0°/5°/10° 三档在赛前采集的样张上比较整帧可用率，5° 命中最多；写死是因为比赛只有一块板、一种停车姿态。
@@ -68,3 +77,4 @@
 7. **文字识别为什么离线能过、现场挂？** 先怀疑指标，再怀疑输入，最后才怀疑算法。指标上 `STATS["success"]` 只要 Tesseract 吐出任意字符就 +1，而秒数越界时又静默回退 `8` ——**错答案没有失败信号**，离线阶段指标全绿；输入上是固定 ROI 依赖「车每次停同一位置」，现场 `xy_goal_tolerance` 内的落位偏差会让板子出画；算法上 `C=2` 在反光牌面上把笔画整体吃掉，「忙」「空」只差局部笔画。修法写成了四条最小验证闭环（人工标注集换指标 → 量化停车误差 → 失败显式上报 → 板框透视回正再 OCR）。
 8. **70 s 对 240 s，余量 70%，为什么不把停停顿再压、或者少跑点？** 因为余量本身是设计目标：现场有障碍、costmap 残留、裁判端抖动，余量是给这些异常留的预算。而且复盘算出停顿 + 4 s 固定等待只占 70 s 的 7%，**瓶颈不在停顿而在导航段**——继续抠停顿的收益不足 5 s，却会牺牲取样本动作的稳定性。真正该优化的是识别板那 4 s 固定等待（`rospy.sleep(1.0)` + 3 s 轮询且不 `break`），但那需要改「多等几帧更可信」的判断，风险高于收益。
 9. **前几届只识别大写字母，你这届多了什么？** 多了处方二维码（透视畸变 + 四区域投票）和状态牌文字（Tesseract chi_sim + 语义约束）两路；识别从「单字符分类」变成「结构化单据解析」，也把识别结果接进了任务状态机与裁判上报（`CV2` 字段 `"AB-2"` 这种格式就是给裁判端解析用的）。
+10. **多车怎么协同的？为什么比赛版是单车？** 平台给的是「一主多从 ROS + 手柄三路 `cmd_vel` 扇出」：`hostname`/`hosts` 绑地址、`ROS_MASTER_URI:11311` 指 master、每车 `cmd_vel` remap 到 `EPRobotN/cmd_vel` 做命名空间隔离——**这层是基础设施，不含任何协同决策**。我们前期在它之上加了车际 TCP 传识别结果；比赛版改成单车 + 每车直报裁判，因为现场网络由主办方发放，改 `hostname`/`hosts` 风险高于收益，且协调责任可以外移给裁判端（详见 `docs/09`）。被追问「多机协同的代码在哪」就如实说：基础设施是平台的，协同策略那版没留存。
